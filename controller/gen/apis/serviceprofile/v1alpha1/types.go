@@ -69,6 +69,8 @@ type Range struct {
 	Max uint32 `json:"max,omitempty"`
 }
 
+// RetryBudget describes the maximum number of retries that should be issued to
+// this service.
 type RetryBudget struct {
 	RetryRatio          float32 `json:"retryRatio"`
 	MinRetriesPerSecond uint32  `json:"minRetriesPerSecond"`

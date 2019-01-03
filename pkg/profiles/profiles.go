@@ -20,7 +20,7 @@ type profileTemplateConfig struct {
 	ClusterZone           string
 }
 
-// This RetryBudget is used for routes which do not specify one.
+// DefaultRetryBudget is used for routes which do not specify one.
 var DefaultRetryBudget = pb.RetryBudget{
 	MinRetriesPerSecond: 10,
 	RetryRatio:          0.2,
