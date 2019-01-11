@@ -208,12 +208,12 @@ func GenStatSummaryResponse(resName, resType string, resNs []string, counts *Pod
 }
 
 // GenTopRoutesResponse generates a mock Public API TopRoutesResponse object.
-func GenTopRoutesResponse(routes []string, counts []uint64) pb.TopRoutesResponse {
+func GenTopRoutesResponse(routes []string, counts []uint64, authority string) pb.TopRoutesResponse {
 	rows := []*pb.RouteTable_Row{}
 	for i, route := range routes {
 		row := &pb.RouteTable_Row{
 			Route:     route,
-			Authority: "foo.default.svc.cluster.local",
+			Authority: authority,
 			Stats: &pb.BasicStats{
 				SuccessCount: counts[i],
 				FailureCount: 0,
@@ -225,6 +225,18 @@ func GenTopRoutesResponse(routes []string, counts []uint64) pb.TopRoutesResponse
 		}
 		rows = append(rows, row)
 	}
+	rows = append(rows, &pb.RouteTable_Row{
+		Route:     "[DEFAULT]",
+		Authority: authority,
+		Stats: &pb.BasicStats{
+			SuccessCount: counts[len(counts)-1],
+			FailureCount: 0,
+			LatencyMsP50: 123,
+			LatencyMsP95: 123,
+			LatencyMsP99: 123,
+		},
+		TimeWindow: "1m",
+	})
 
 	resp := pb.TopRoutesResponse{
 		Response: &pb.TopRoutesResponse_Routes{

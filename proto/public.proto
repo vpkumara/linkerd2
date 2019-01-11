@@ -368,8 +368,13 @@ message TopRoutesRequest {
 
   oneof outbound {
     Empty none = 3;
+
+    // Deprecated, use to_resource with the Authority resource type.
     string to_authority = 5;
+    // Deprecated, use to_resource with the Authority resource type.
     Empty to_all = 6;
+
+    Resource to_resource   = 7;
   }
 }
 

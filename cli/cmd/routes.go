@@ -26,8 +26,6 @@ type routesOptions struct {
 	dstIsService bool
 }
 
-const defaultRoute = "[UNKNOWN]"
-
 func newRoutesOptions() *routesOptions {
 	return &routesOptions{
 		statOptionsBase: *newStatOptionsBase(),
@@ -84,7 +82,7 @@ func requestRouteStatsFromAPI(client pb.ApiClient, req *pb.TopRoutesRequest, opt
 		return "", fmt.Errorf("TopRoutes API error: %v", err)
 	}
 	if e := resp.GetError(); e != nil {
-		return "", fmt.Errorf("TopRoutes API response error: %v", e.Error)
+		return "", errors.New(e.Error)
 	}
 
 	return renderRouteStats(resp, options), nil
@@ -105,9 +103,6 @@ func writeRouteStatsToBuffer(resp *pb.TopRoutesResponse, w *tabwriter.Writer, op
 	for _, r := range resp.GetRoutes().Rows {
 		if r.Stats != nil {
 			route := r.GetRoute()
-			if route == "" {
-				route = defaultRoute
-			}
 			table = append(table, &rowStats{
 				route:       route,
 				dst:         r.GetAuthority(),
@@ -121,7 +116,7 @@ func writeRouteStatsToBuffer(resp *pb.TopRoutesResponse, w *tabwriter.Writer, op
 	}
 
 	sort.Slice(table, func(i, j int) bool {
-		return table[i].route+table[i].dst < table[j].route+table[j].dst
+		return table[i].dst+table[i].route < table[j].dst+table[j].route
 	})
 
 	switch options.outputFormat {
@@ -160,16 +155,9 @@ func printRouteTable(stats []*rowStats, w *tabwriter.Writer, options *routesOpti
 	templateString := routeTemplate + "\t%s\t%.2f%%\t%.1frps\t%dms\t%dms\t%dms\t\n"
 
 	for _, row := range stats {
-
-		authorityValue := row.dst
-		if options.dstIsService {
-			segments := strings.Split(row.dst, ".")
-			authorityValue = segments[0]
-		}
-
 		fmt.Fprintf(w, templateString,
 			row.route,
-			authorityValue,
+			row.dst,
 			row.successRate*100,
 			row.requestRate,
 			row.latencyP50,
@@ -236,12 +224,9 @@ func buildTopRoutesRequest(resource string, options *routesOptions) (*pb.TopRout
 		},
 	}
 
-	options.dstIsService = target.GetType() == k8s.Service
+	options.dstIsService = !(target.GetType() == k8s.Authority)
 
 	if options.toResource != "" {
-		if target.GetType() == k8s.Service {
-			return nil, errors.New("Cannot use \"--to\" when the target resource is a service")
-		}
 		if options.toNamespace == "" {
 			options.toNamespace = options.namespace
 		}
@@ -250,36 +235,19 @@ func buildTopRoutesRequest(resource string, options *routesOptions) (*pb.TopRout
 			return nil, err
 		}
 
-		options.dstIsService = toRes.GetType() == k8s.Service
+		options.dstIsService = !(toRes.GetType() == k8s.Authority)
 
-		toDNS, err := buildTopRoutesTo(toRes)
-		if err != nil {
-			return nil, err
-		}
-
-		if toDNS == "" && toRes.GetType() == k8s.Authority {
-			requestParams.ToAll = true
-		} else {
-			requestParams.To = toDNS
-		}
+		requestParams.ToName = toRes.Name
+		requestParams.ToNamespace = toRes.Namespace
+		requestParams.ToType = toRes.Type
 	}
 
 	return util.BuildTopRoutesRequest(requestParams)
 }
 
-func buildTopRoutesTo(toResource pb.Resource) (string, error) {
-	if toResource.GetType() == k8s.Service {
-		return fmt.Sprintf("%s.%s.svc.cluster.local", toResource.GetName(), toResource.GetNamespace()), nil
-	}
-	if toResource.GetType() == k8s.Authority {
-		return toResource.GetName(), nil
-	}
-	return "", errors.New("The \"--to\" resource must be an authority or service")
-}
-
 // returns the length of the longest route name
 func routeWidth(stats []*rowStats) int {
-	maxLength := len(defaultRoute)
+	maxLength := 0
 	for _, row := range stats {
 		if len(row.route) > maxLength {
 			maxLength = len(row.route)

@@ -461,9 +461,6 @@ func renderTable(table *topTable, requestCh <-chan topRequest, done <-chan struc
 func newRow(req topRequest) (tableRow, error) {
 	path := req.reqInit.GetPath()
 	route := req.event.GetRouteMeta().GetLabels()["route"]
-	if route == "" {
-		route = defaultRoute
-	}
 	method := req.reqInit.GetMethod().GetRegistered().String()
 	source := stripPort(addr.PublicAddressToString(req.event.GetSource()))
 	if pod := req.event.SourceMeta.Labels["pod"]; pod != "" {
