@@ -79,45 +79,45 @@ func configureAndRunChecks(options *checkOptions) error {
 	if err != nil {
 		return fmt.Errorf("Validation error when executing check command: %v", err)
 	}
-	checks := []healthcheck.Checks{
-		healthcheck.KubernetesAPIChecks,
-		healthcheck.KubernetesVersionChecks,
+	categories := healthcheck.CategorySet{
+		healthcheck.KubernetesAPIChecks:     struct{}{},
+		healthcheck.KubernetesVersionChecks: struct{}{},
 	}
 
 	if options.preInstallOnly {
 		if options.singleNamespace {
-			checks = append(checks, healthcheck.LinkerdPreInstallSingleNamespaceChecks)
+			categories[healthcheck.LinkerdPreInstallSingleNamespaceChecks] = struct{}{}
 		} else {
-			checks = append(checks, healthcheck.LinkerdPreInstallClusterChecks)
+			categories[healthcheck.LinkerdPreInstallClusterChecks] = struct{}{}
 		}
-		checks = append(checks, healthcheck.LinkerdPreInstallChecks)
+		categories[healthcheck.LinkerdPreInstallChecks] = struct{}{}
 	} else if options.dataPlaneOnly {
-		checks = append(checks, healthcheck.LinkerdControlPlaneExistenceChecks)
-		checks = append(checks, healthcheck.LinkerdAPIChecks)
+		categories[healthcheck.LinkerdControlPlaneExistenceChecks] = struct{}{}
+		categories[healthcheck.LinkerdAPIChecks] = struct{}{}
 		if !options.singleNamespace {
-			checks = append(checks, healthcheck.LinkerdServiceProfileChecks)
+			categories[healthcheck.LinkerdServiceProfileChecks] = struct{}{}
 		}
 		if options.namespace != "" {
-			checks = append(checks, healthcheck.LinkerdDataPlaneExistenceChecks)
+			categories[healthcheck.LinkerdDataPlaneExistenceChecks] = struct{}{}
 		}
-		checks = append(checks, healthcheck.LinkerdDataPlaneChecks)
+		categories[healthcheck.LinkerdDataPlaneChecks] = struct{}{}
 	} else {
-		checks = append(checks, healthcheck.LinkerdControlPlaneExistenceChecks)
-		checks = append(checks, healthcheck.LinkerdAPIChecks)
+		categories[healthcheck.LinkerdControlPlaneExistenceChecks] = struct{}{}
+		categories[healthcheck.LinkerdAPIChecks] = struct{}{}
 		if !options.singleNamespace {
-			checks = append(checks, healthcheck.LinkerdServiceProfileChecks)
+			categories[healthcheck.LinkerdServiceProfileChecks] = struct{}{}
 		}
 	}
 
-	checks = append(checks, healthcheck.LinkerdVersionChecks)
+	categories[healthcheck.LinkerdVersionChecks] = struct{}{}
 	if !(options.preInstallOnly || options.dataPlaneOnly) {
-		checks = append(checks, healthcheck.LinkerdControlPlaneVersionChecks)
+		categories[healthcheck.LinkerdControlPlaneVersionChecks] = struct{}{}
 	}
 	if options.dataPlaneOnly {
-		checks = append(checks, healthcheck.LinkerdDataPlaneVersionChecks)
+		categories[healthcheck.LinkerdDataPlaneVersionChecks] = struct{}{}
 	}
 
-	hc := healthcheck.NewHealthChecker(checks, &healthcheck.Options{
+	hc := healthcheck.NewHealthChecker(categories, &healthcheck.Options{
 		ControlPlaneNamespace: controlPlaneNamespace,
 		DataPlaneNamespace:    options.namespace,
 		KubeConfig:            kubeconfigPath,

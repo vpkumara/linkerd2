@@ -97,16 +97,16 @@ func cliPublicAPIClient() pb.ApiClient {
 // checks fail, then CLI will print an error and exit. If the retryDeadline
 // param is specified, then the CLI will print a message to stderr and retry.
 func validatedPublicAPIClient(retryDeadline time.Time, apiChecks bool) pb.ApiClient {
-	checks := []healthcheck.Checks{
-		healthcheck.KubernetesAPIChecks,
-		healthcheck.LinkerdControlPlaneExistenceChecks,
+	categories := healthcheck.CategorySet{
+		healthcheck.KubernetesAPIChecks:                struct{}{},
+		healthcheck.LinkerdControlPlaneExistenceChecks: struct{}{},
 	}
 
 	if apiChecks {
-		checks = append(checks, healthcheck.LinkerdAPIChecks)
+		categories[healthcheck.LinkerdAPIChecks] = struct{}{}
 	}
 
-	hc := healthcheck.NewHealthChecker(checks, &healthcheck.Options{
+	hc := healthcheck.NewHealthChecker(categories, &healthcheck.Options{
 		ControlPlaneNamespace: controlPlaneNamespace,
 		KubeConfig:            kubeconfigPath,
 		KubeContext:           kubeContext,
@@ -123,11 +123,11 @@ func validatedPublicAPIClient(retryDeadline time.Time, apiChecks bool) pb.ApiCli
 		if result.Err != nil && !result.Warning {
 			var msg string
 			switch result.Category {
-			case healthcheck.KubernetesAPICategory:
+			case healthcheck.KubernetesAPIChecks:
 				msg = "Cannot connect to Kubernetes"
-			case healthcheck.LinkerdControlPlaneExistenceCategory:
+			case healthcheck.LinkerdControlPlaneExistenceChecks:
 				msg = "Cannot find Linkerd"
-			case healthcheck.LinkerdAPICategory:
+			case healthcheck.LinkerdAPIChecks:
 				msg = "Cannot connect to Linkerd"
 			}
 			fmt.Fprintf(os.Stderr, "%s: %s\n", msg, result.Err)
