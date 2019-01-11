@@ -18,6 +18,7 @@ const (
 	routeReqQuery             = "sum(increase(route_response_total%s[%s])) by (%s, dst, classification)"
 	routeLatencyQuantileQuery = "histogram_quantile(%s, sum(irate(route_response_latency_ms_bucket%s[%s])) by (le, dst, %s))"
 	dstLabel                  = `dst=~"(%s)(:\\d+)?"`
+	DefaultRouteName          = "[DEFAULT]"
 )
 
 type dstAndRoute struct {
@@ -157,7 +158,7 @@ func addRouteRows(table indexedTable, profile *sp.ServiceProfile, dst string, au
 	}
 	table[defaultRoute] = &pb.RouteTable_Row{
 		Authority: authority,
-		Route:     "[DEFAULT]",
+		Route:     DefaultRouteName,
 		Stats:     &pb.BasicStats{},
 	}
 }
