@@ -259,10 +259,8 @@ func (api *API) GetOwnerKindAndName(pod *apiv1.Pod) (string, string) {
 }
 
 // GetPodsFor returns all running and pending Pods associated with a given
-// Kubernetes object. Use includeFailed to also get failed Pods.  Also returns
-// the namespace of the given object.
+// Kubernetes object. Use includeFailed to also get failed Pods
 func (api *API) GetPodsFor(obj runtime.Object, includeFailed bool) ([]*apiv1.Pod, error) {
-
 	var namespace string
 	var selector labels.Selector
 	var pods []*apiv1.Pod
@@ -274,7 +272,6 @@ func (api *API) GetPodsFor(obj runtime.Object, includeFailed bool) ([]*apiv1.Pod
 		selector = labels.Everything()
 
 	case *appsv1beta2.Deployment:
-		log.Errorf("GETTING PODS FOR DEPLOY %s", typed.Name)
 		namespace = typed.Namespace
 		selector = labels.Set(typed.Spec.Selector.MatchLabels).AsSelector()
 
